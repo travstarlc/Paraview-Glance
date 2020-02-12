@@ -1,0 +1,117 @@
+<div :class="{ [$style.overlay]: true, [$style.visible]: stage !== 'idle' }">
+  <div :class="$style.dialog">
+    <v-card raised :class="$style.card">
+      <v-card-text
+        v-if="stage === 'load'"
+        key="if-stage"
+      >
+        <div class="text-center mb-4">
+          <span class="display-1">
+            Loading {{ loadingNames.join(', ') }}
+          </span>
+        </div>
+        <v-progress-linear
+          :indeterminate="indeterminateProgress"
+          :value="totalProgress"
+          height="10"
+          color="info"
+        />
+      </v-card-text>
+      <v-card-text
+        v-else-if="stage === 'preload'"
+        key="if-stage"
+      >
+        <v-card-title class="title grey--text text--darken-4">
+          A few files need extra details before loading:
+        </v-card-title>
+        <v-expansion-panels multiple accordion>
+          <v-expansion-panel
+            v-for="(file, i) in files"
+            :key="i"
+            :hide-default-footer="!isRawFile(file)"
+          >
+            <v-expansion-panel-header class="body-2">
+              <v-layout row align-center>
+                <v-flex shrink>
+                  <v-icon v-show="isRawFile(file)" left>mdi-alert-circle</v-icon>
+                </v-flex>
+                <v-flex shrink>{{ file.name }}</v-flex>
+              </v-layout>
+            </v-expansion-panel-header>
+            <v-expansion-panel-content v-if="isRawFile(file)">
+              <raw-file-reader
+                :file="file"
+                v-on:change="setFileRawInfo(i, arguments[0])"
+              />
+            </v-expansion-panel-content>
+          </v-expansion-panel>
+        </v-expansion-panels>
+      </v-card-text>
+      <v-card-text
+        v-else-if="stage === 'error'"
+        key="if-stage"
+      >
+        <v-card-title class="title grey--text text--darken-4">
+          A few files errored while loading, and won't be loaded:
+        </v-card-title>
+        <v-expansion-panels multiple accordion>
+          <v-expansion-panel
+            v-for="(file, i) in files"
+            :key="i"
+            :disabled="!file.error"
+          >
+            <v-expansion-panel-header
+              class="body-2"
+              :class="$style.headerText"
+            >
+              <v-icon
+                v-show="!!file.error"
+                color="red"
+                class="flex-grow-0"
+                left
+              >
+                mdi-alert-circle
+              </v-icon>
+              <v-icon
+                v-show="!file.error"
+                color="green"
+                class="flex-grow-0"
+                left
+              >
+                mdi-check-circle
+              </v-icon>
+              {{ file.name }}
+            </v-expansion-panel-header>
+            <v-expansion-panel-content>
+              <v-card v-if="file.error" flat>
+                <v-card-text>
+                  Error: {{ file.error.message || 'Unknown or bad file' }}
+                </v-card-text>
+              </v-card>
+            </v-expansion-panel-content>
+          </v-expansion-panel>
+        </v-expansion-panels>
+      </v-card-text>
+      <v-card-actions v-if="stage === 'preload'" key="if-actions">
+        <v-spacer />
+        <v-btn v-on:click="cancel">Cancel</v-btn>
+        <v-btn
+          color="primary"
+          :disabled="!preloadCanContinue"
+          v-on:click="openFiles(files)"
+        >
+          Load files
+        </v-btn>
+      </v-card-actions>
+      <v-card-actions v-else-if="stage === 'error'" key="if-actions">
+        <v-spacer />
+        <v-btn
+          color="primary"
+          v-on:click="closeAndTryToLoad"
+        >
+          ok
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </div>
+</div>
